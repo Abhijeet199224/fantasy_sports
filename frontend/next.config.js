@@ -11,10 +11,8 @@ const nextConfig = {
     unoptimized: true,
   },
   
-  // Fix lockfile warning
-  experimental: {
-    outputFileTracingRoot: path.join(__dirname, '../'),
-  },
+  // Move this outside experimental
+  outputFileTracingRoot: path.join(__dirname, '../'),
 }
 
 module.exports = nextConfig

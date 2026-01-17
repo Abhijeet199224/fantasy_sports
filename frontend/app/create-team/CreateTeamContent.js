@@ -3,7 +3,6 @@
 
 import { useState, useEffect } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
-import PlayerCard from '@/components/PlayerCard';
 
 export default function CreateTeamContent() {
   const searchParams = useSearchParams();
@@ -119,7 +118,7 @@ export default function CreateTeamContent() {
         </div>
       </div>
       
-      <div className="flex gap-2 mb-4">
+      <div className="flex gap-2 mb-4 flex-wrap">
         {['ALL', 'WK', 'BAT', 'AR', 'BOWL'].map(role => (
           <button
             key={role}
@@ -133,16 +132,56 @@ export default function CreateTeamContent() {
       
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-20">
         {filteredPlayers.map(player => (
-          <PlayerCard
+          <div
             key={player.playerId}
-            player={player}
-            isSelected={selectedPlayers.some(p => p.playerId === player.playerId)}
-            isCaptain={captain?.playerId === player.playerId}
-            isViceCaptain={viceCaptain?.playerId === player.playerId}
-            onToggle={() => togglePlayer(player)}
-            onSetCaptain={() => selectedPlayers.some(p => p.playerId === player.playerId) && setCaptain(player)}
-            onSetViceCaptain={() => selectedPlayers.some(p => p.playerId === player.playerId) && setViceCaptain(player)}
-          />
+            className={`border rounded-lg p-4 cursor-pointer ${
+              selectedPlayers.some(p => p.playerId === player.playerId) ? 'border-green-500 bg-green-50' : 'border-gray-300'
+            }`}
+            onClick={() => togglePlayer(player)}
+          >
+            <div className="flex justify-between mb-2">
+              <div>
+                <h3 className="font-bold">{player.name}</h3>
+                <span className="text-sm text-gray-600">{player.team}</span>
+              </div>
+              <div className="text-right">
+                <div className="font-bold">{player.credits}</div>
+                <div className="text-xs text-gray-500">Credits</div>
+              </div>
+            </div>
+            
+            <div className="flex items-center gap-2 mb-2">
+              <span className={`px-2 py-1 text-xs rounded ${
+                player.role === 'BAT' ? 'bg-red-100 text-red-700' :
+                player.role === 'BOWL' ? 'bg-blue-100 text-blue-700' :
+                player.role === 'AR' ? 'bg-purple-100 text-purple-700' :
+                'bg-yellow-100 text-yellow-700'
+              }`}>
+                {player.role}
+              </span>
+            </div>
+            
+            {selectedPlayers.some(p => p.playerId === player.playerId) && (
+              <div className="flex gap-2 mt-3" onClick={(e) => e.stopPropagation()}>
+                <button
+                  className={`flex-1 py-1 text-xs rounded ${
+                    captain?.playerId === player.playerId ? 'bg-yellow-500 text-white' : 'bg-gray-200'
+                  }`}
+                  onClick={() => setCaptain(player)}
+                >
+                  {captain?.playerId === player.playerId ? '(C) 2x' : 'Captain'}
+                </button>
+                <button
+                  className={`flex-1 py-1 text-xs rounded ${
+                    viceCaptain?.playerId === player.playerId ? 'bg-orange-500 text-white' : 'bg-gray-200'
+                  }`}
+                  onClick={() => setViceCaptain(player)}
+                >
+                  {viceCaptain?.playerId === player.playerId ? '(VC) 1.5x' : 'VC'}
+                </button>
+              </div>
+            )}
+          </div>
         ))}
       </div>
       
