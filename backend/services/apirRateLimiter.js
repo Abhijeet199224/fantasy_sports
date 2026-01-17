@@ -1,5 +1,7 @@
 // backend/services/apiRateLimiter.js
 const NodeCache = require('node-cache');
+const fetch = require('node-fetch');
+
 const apiCallCache = new NodeCache({ stdTTL: 300 }); // 5-minute cache
 
 class CricketAPIManager {
@@ -16,6 +18,7 @@ class CricketAPIManager {
       this.callsToday = 0;
       this.lastResetDate = today;
       this.callLog = [];
+      console.log('✅ API call counter reset for new day');
     }
   }
 
@@ -28,31 +31,50 @@ class CricketAPIManager {
     // Check cache first
     const cached = apiCallCache.get(cacheKey);
     if (cached) {
-      console.log(`Cache HIT: ${cacheKey}`);
+      console.log(`💾 Cache HIT: ${cacheKey}`);
       return cached;
     }
 
     // Check rate limit
     if (!this.canMakeCall()) {
-      throw new Error('Daily API limit reached. Try again tomorrow.');
+      throw new Error('Daily API limit reached (100/100). Try again tomorrow.');
     }
 
     // Make API call
     try {
-      const response = await fetch(`https://api.cricketdata.org/${endpoint}`, {
-        headers: { 'Authorization': `Bearer ${process.env.CRICKET_API_KEY}` }
+      const url = `https://api.cricketdata.org/${endpoint}`;
+      console.log(`🌐 API Call (${this.callsToday + 1}/100): ${endpoint}`);
+      
+      const response = await fetch(url, {
+        headers: { 
+          'Authorization': `Bearer ${process.env.CRICKET_API_KEY}`
+        }
       });
+      
+      if (!response.ok) {
+        throw new Error(`API Error: ${response.status} ${response.statusText}`);
+      }
       
       const data = await response.json();
       this.callsToday++;
-      this.callLog.push({ endpoint, timestamp: new Date(), success: true });
+      this.callLog.push({ 
+        endpoint, 
+        timestamp: new Date(), 
+        success: true,
+        cacheKey 
+      });
       
       // Cache the response
       apiCallCache.set(cacheKey, data, cacheTTL);
       
       return data;
     } catch (error) {
-      this.callLog.push({ endpoint, timestamp: new Date(), success: false, error: error.message });
+      this.callLog.push({ 
+        endpoint, 
+        timestamp: new Date(), 
+        success: false, 
+        error: error.message 
+      });
       throw error;
     }
   }
@@ -63,11 +85,18 @@ class CricketAPIManager {
   }
 
   getCallLog() {
+    this.resetIfNewDay();
     return {
       used: this.callsToday,
       remaining: this.getRemainingCalls(),
+      limit: this.dailyLimit,
       logs: this.callLog.slice(-20) // Last 20 calls
     };
+  }
+
+  clearCache() {
+    apiCallCache.flushAll();
+    console.log('🗑️  Cache cleared');
   }
 }
 

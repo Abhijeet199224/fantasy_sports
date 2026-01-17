@@ -1,5 +1,6 @@
 // backend/middleware/auth.js
 const { createClient } = require('@supabase/supabase-js');
+const User = require('../models/User');
 
 const supabase = createClient(
   process.env.SUPABASE_URL,
@@ -7,33 +8,53 @@ const supabase = createClient(
 );
 
 async function verifyAuth(req, res, next) {
-  const token = req.headers.authorization?.split('Bearer ')[1];
-  
-  if (!token) {
-    return res.status(401).json({ error: 'No token provided' });
+  try {
+    const authHeader = req.headers.authorization;
+    
+    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+      return res.status(401).json({ error: 'No token provided' });
+    }
+    
+    const token = authHeader.split('Bearer ')[1];
+    
+    const {  { user }, error } = await supabase.auth.getUser(token);
+    
+    if (error || !user) {
+      return res.status(401).json({ error: 'Invalid token' });
+    }
+    
+    // Find or create user in MongoDB
+    let dbUser = await User.findOne({ supabaseId: user.id });
+    
+    if (!dbUser) {
+      dbUser = await User.create({
+        supabaseId: user.id,
+        email: user.email,
+        displayName: user.user_metadata?.full_name || user.email.split('@')[0],
+        avatar: user.user_metadata?.avatar_url
+      });
+    }
+    
+    req.user = user;
+    req.dbUser = dbUser;
+    next();
+  } catch (error) {
+    console.error('Auth error:', error);
+    res.status(500).json({ error: 'Authentication failed' });
   }
-  
-  const {  { user }, error } = await supabase.auth.getUser(token);
-  
-  if (error || !user) {
-    return res.status(401).json({ error: 'Invalid token' });
-  }
-  
-  req.user = user;
-  next();
 }
 
 async function verifyAdmin(req, res, next) {
-  await verifyAuth(req, res, async () => {
-    const User = require('../models/User');
-    const dbUser = await User.findOne({ supabaseId: req.user.id });
-    
-    if (!dbUser || !dbUser.isAdmin) {
-      return res.status(403).json({ error: 'Admin access required' });
-    }
-    
-    next();
-  });
+  try {
+    await verifyAuth(req, res, async () => {
+      if (!req.dbUser.isAdmin) {
+        return res.status(403).json({ error: 'Admin access required' });
+      }
+      next();
+    });
+  } catch (error) {
+    res.status(500).json({ error: 'Admin verification failed' });
+  }
 }
 
 module.exports = { verifyAuth, verifyAdmin };
