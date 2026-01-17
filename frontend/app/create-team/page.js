@@ -1,9 +1,8 @@
-/// frontend/app/create-team/page.js
+// frontend/app/create-team/page.js
 'use client';
 
 import { useState, useEffect } from 'react';
-import { useSearchParams } from 'next/navigation';
-import { useRouter } from 'next/navigation';
+import { useSearchParams, useRouter } from 'next/navigation';
 import PlayerCard from '@/components/PlayerCard';
 
 export default function CreateTeam() {
@@ -26,22 +25,93 @@ export default function CreateTeam() {
   }, [matchId]);
   
   const fetchMatch = async () => {
-    const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/matches/${matchId}`);
-    const data = await res.json();
-    setMatch(data);
+    try {
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/matches/${matchId}`);
+      const data = await res.json();
+      setMatch(data);
+    } catch (error) {
+      console.error('Failed to fetch match:', error);
+    }
   };
   
-  // ... rest of your component logic (same as before)
+  const togglePlayer = (player) => {
+    if (selectedPlayers.find(p => p.playerId === player.playerId)) {
+      setSelectedPlayers(selectedPlayers.filter(p => p.playerId !== player.playerId));
+      setCredits(credits + player.credits);
+      
+      if (captain?.playerId === player.playerId) setCaptain(null);
+      if (viceCaptain?.playerId === player.playerId) setViceCaptain(null);
+    } else {
+      if (selectedPlayers.length >= 11) {
+        alert('Maximum 11 players allowed');
+        return;
+      }
+      
+      if (credits < player.credits) {
+        alert('Insufficient credits');
+        return;
+      }
+      
+      setSelectedPlayers([...selectedPlayers, player]);
+      setCredits(credits - player.credits);
+    }
+  };
+  
+  const saveTeam = async () => {
+    if (selectedPlayers.length !== 11) {
+      alert('Select exactly 11 players');
+      return;
+    }
+    
+    if (!captain || !viceCaptain) {
+      alert('Select Captain and Vice-Captain');
+      return;
+    }
+    
+    const token = localStorage.getItem('supabase_token');
+    
+    try {
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/teams`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({
+          matchId,
+          contestId,
+          teamName: `Team ${Date.now()}`,
+          players: selectedPlayers.map(p => ({
+            ...p,
+            isCaptain: p.playerId === captain.playerId,
+            isViceCaptain: p.playerId === viceCaptain.playerId
+          }))
+        })
+      });
+      
+      if (res.ok) {
+        router.push('/my-teams');
+      } else {
+        alert('Failed to save team');
+      }
+    } catch (error) {
+      alert('Error: ' + error.message);
+    }
+  };
   
   if (!matchId) {
-    return <div className="p-4">No match selected</div>;
+    return <div className="container mx-auto p-4">No match selected</div>;
   }
   
-  if (!match) return <div>Loading...</div>;
-
+  if (!match) return <div className="container mx-auto p-4">Loading...</div>;
+  
+  const filteredPlayers = filter === 'ALL' 
+    ? match.squad 
+    : match.squad.filter(p => p.role === filter);
+  
   return (
     <div className="container mx-auto p-4">
-      <div className="sticky top-0 bg-white shadow-md p-4 mb-4">
+      <div className="sticky top-0 bg-white shadow-md p-4 mb-4 z-10">
         <h1 className="text-2xl font-bold">{match.title}</h1>
         <div className="flex justify-between mt-2">
           <span>Players: {selectedPlayers.length}/11</span>
@@ -49,7 +119,6 @@ export default function CreateTeam() {
         </div>
       </div>
       
-      {/* Role Filter */}
       <div className="flex gap-2 mb-4">
         {['ALL', 'WK', 'BAT', 'AR', 'BOWL'].map(role => (
           <button
@@ -62,8 +131,7 @@ export default function CreateTeam() {
         ))}
       </div>
       
-      {/* Player Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-20">
         {filteredPlayers.map(player => (
           <PlayerCard
             key={player.playerId}
@@ -78,10 +146,9 @@ export default function CreateTeam() {
         ))}
       </div>
       
-      {/* Save Button */}
       <div className="fixed bottom-0 left-0 right-0 bg-white shadow-lg p-4">
         <button
-          className="w-full bg-green-600 text-white py-3 rounded-lg font-bold"
+          className="w-full bg-green-600 text-white py-3 rounded-lg font-bold hover:bg-green-700"
           onClick={saveTeam}
         >
           Save Team

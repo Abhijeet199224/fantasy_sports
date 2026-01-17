@@ -55,10 +55,10 @@ export default function AdminPanel() {
       });
       
       if (res.ok) {
-        alert('Match data refreshed successfully!');
-        fetchApiStats(); // Refresh stats
+        alert('Match data refreshed!');
+        fetchApiStats();
       } else {
-        alert('Failed to refresh match data');
+        alert('Failed to refresh');
       }
     } catch (error) {
       alert('Error: ' + error.message);
@@ -69,7 +69,6 @@ export default function AdminPanel() {
     <div className="container mx-auto p-4">
       <h1 className="text-3xl font-bold mb-6">Admin Panel</h1>
       
-      {/* System Health */}
       <div className="bg-white rounded-lg shadow p-6 mb-6">
         <h2 className="text-xl font-bold mb-4">System Health</h2>
         
@@ -82,13 +81,12 @@ export default function AdminPanel() {
           <div>
             <p className="text-gray-600">Backend Status</p>
             <p className={`text-2xl font-bold ${backendStatus === 'ok' ? 'text-green-600' : 'text-red-600'}`}>
-              {backendStatus === 'ok' ? 'Active' : backendStatus === 'checking' ? 'Checking...' : 'Offline'}
+              {backendStatus === 'ok' ? 'Active' : 'Offline'}
             </p>
           </div>
         </div>
       </div>
       
-      {/* Match Controls */}
       <div className="bg-white rounded-lg shadow p-6">
         <h2 className="text-xl font-bold mb-4">Match Controls</h2>
         
@@ -107,7 +105,7 @@ export default function AdminPanel() {
                 disabled={apiStats.remaining <= 0}
                 className="bg-blue-600 text-white px-4 py-2 rounded disabled:bg-gray-400"
               >
-                Refresh ({apiStats.remaining} calls left)
+                Refresh ({apiStats.remaining} left)
               </button>
             </div>
           ))}
