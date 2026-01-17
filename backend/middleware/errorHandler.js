@@ -1,4 +1,6 @@
 // backend/middleware/errorHandler.js
+// This should export a FUNCTION, not use module.exports at the end
+
 module.exports = (err, req, res, next) => {
   console.error('Error:', err);
   

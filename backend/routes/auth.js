@@ -51,4 +51,4 @@ router.get('/user/:userId', async (req, res) => {
   }
 });
 
-module.exports = router;
+module.exports = router; // ✅ MAKE SURE THIS LINE EXISTS

@@ -24,15 +24,36 @@ app.get('/', (req, res) => {
   res.json({ message: 'Fantasy Cricket API is running!' });
 });
 
-// Routes
-app.use('/api/auth', require('./routes/auth'));
-app.use('/api/matches', require('./routes/matches'));
-app.use('/api/contests', require('./routes/contests'));
-app.use('/api/teams', require('./routes/teams'));
-app.use('/api/admin', require('./routes/admin'));
+// Routes - with error handling
+try {
+  app.use('/api/auth', require('./routes/auth'));
+  app.use('/api/matches', require('./routes/matches'));
+  app.use('/api/contests', require('./routes/contests'));
+  app.use('/api/teams', require('./routes/teams'));
+  app.use('/api/admin', require('./routes/admin'));
+  console.log('✅ All routes loaded successfully');
+} catch (error) {
+  console.error('❌ Error loading routes:', error.message);
+  process.exit(1);
+}
 
 // Error handling middleware
-app.use(require('./middleware/errorHandler'));
+app.use((err, req, res, next) => {
+  console.error('Error:', err);
+  
+  if (err.name === 'ValidationError') {
+    const errors = Object.values(err.errors).map(e => e.message);
+    return res.status(400).json({ error: 'Validation Error', details: errors });
+  }
+  
+  if (err.code === 11000) {
+    return res.status(409).json({ error: 'Duplicate entry', field: Object.keys(err.keyPattern)[0] });
+  }
+  
+  res.status(err.status || 500).json({ 
+    error: err.message || 'Internal Server Error' 
+  });
+});
 
 // MongoDB Connection
 mongoose.connect(process.env.MONGODB_URI)
