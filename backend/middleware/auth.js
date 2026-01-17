@@ -17,6 +17,8 @@ async function verifyAuth(req, res, next) {
     
     const token = authHeader.split('Bearer ')[1];
     
+    // ❌ WRONG: const {  { user }, error } = await supabase.auth.getUser(token);
+    // ✅ CORRECT:
     const {  { user }, error } = await supabase.auth.getUser(token);
     
     if (error || !user) {
