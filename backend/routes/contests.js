@@ -11,7 +11,7 @@ router.get('/', async (req, res) => {
   try {
     const { status, matchId, limit } = req.query;
     
-    let query = {};
+    const query = {};
     if (status) query.status = status;
     if (matchId) query.matchId = matchId;
     
@@ -50,7 +50,6 @@ router.post('/', verifyAuth, async (req, res) => {
   try {
     const { matchId, name, maxTeams, prizePool } = req.body;
     
-    // Verify match exists
     const match = await Match.findById(matchId);
     if (!match) {
       return res.status(404).json({ error: 'Match not found' });
@@ -84,7 +83,6 @@ router.post('/:contestId/join', verifyAuth, async (req, res) => {
       return res.status(400).json({ error: 'Contest is full' });
     }
     
-    // Check if user already joined
     const alreadyJoined = contest.participants.some(
       p => p.userId.toString() === req.dbUser._id.toString()
     );
@@ -104,7 +102,6 @@ router.post('/:contestId/join', verifyAuth, async (req, res) => {
     
     await contest.save();
     
-    // Update user stats
     req.dbUser.stats.contestsJoined += 1;
     await req.dbUser.save();
     
