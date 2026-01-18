@@ -43,31 +43,26 @@ router.post('/', verifyAuth, async (req, res) => {
   try {
     const { matchId, contestId, teamName, players } = req.body;
     
-    // Validate match exists
     const match = await Match.findById(matchId);
     if (!match) {
       return res.status(404).json({ error: 'Match not found' });
     }
     
-    // Validate contest exists
     const contest = await Contest.findById(contestId);
     if (!contest) {
       return res.status(404).json({ error: 'Contest not found' });
     }
     
-    // Validate 11 players
     if (players.length !== 11) {
       return res.status(400).json({ error: 'Team must have exactly 11 players' });
     }
     
-    // Calculate total credits
     const totalCredits = players.reduce((sum, p) => sum + p.credits, 0);
     
     if (totalCredits > 100) {
       return res.status(400).json({ error: 'Total credits exceed 100' });
     }
     
-    // Validate captain and vice-captain
     const captains = players.filter(p => p.isCaptain);
     const viceCaptains = players.filter(p => p.isViceCaptain);
     
@@ -75,7 +70,6 @@ router.post('/', verifyAuth, async (req, res) => {
       return res.status(400).json({ error: 'Must have exactly 1 captain and 1 vice-captain' });
     }
     
-    // Calculate formation
     const formation = {
       batsmen: players.filter(p => p.role === 'BAT').length,
       bowlers: players.filter(p => p.role === 'BOWL').length,
@@ -94,7 +88,6 @@ router.post('/', verifyAuth, async (req, res) => {
       lockedAt: new Date()
     });
     
-    // Add team to contest participants
     await Contest.findByIdAndUpdate(contestId, {
       $push: {
         participants: {
@@ -110,7 +103,7 @@ router.post('/', verifyAuth, async (req, res) => {
   }
 });
 
-// Update team (only before match starts)
+// Update team
 router.put('/:teamId', verifyAuth, async (req, res) => {
   try {
     const team = await FantasyTeam.findById(req.params.teamId);
