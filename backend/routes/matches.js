@@ -9,7 +9,7 @@ router.get('/', async (req, res) => {
   try {
     const { status, limit } = req.query;
     
-    let query = {};
+    const query = {};
     if (status) {
       query.status = status;
     }
@@ -39,7 +39,7 @@ router.get('/:matchId', async (req, res) => {
   }
 });
 
-// Create match (admin only - for testing, you can add manually to DB)
+// Create match
 router.post('/', verifyAuth, async (req, res) => {
   try {
     const match = await Match.create(req.body);
@@ -54,7 +54,7 @@ router.put('/:matchId', verifyAuth, async (req, res) => {
   try {
     const match = await Match.findByIdAndUpdate(
       req.params.matchId,
-      { $set: req.body },
+      req.body,
       { new: true, runValidators: true }
     );
     
