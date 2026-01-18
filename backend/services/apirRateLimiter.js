@@ -1,8 +1,7 @@
 // backend/services/apiRateLimiter.js
 const NodeCache = require('node-cache');
-const fetch = require('node-fetch');
 
-const apiCallCache = new NodeCache({ stdTTL: 300 }); // 5-minute cache
+const apiCallCache = new NodeCache({ stdTTL: 300 });
 
 class CricketAPIManager {
   constructor() {
@@ -28,20 +27,18 @@ class CricketAPIManager {
   }
 
   async fetchWithCache(endpoint, cacheKey, cacheTTL = 300) {
-    // Check cache first
     const cached = apiCallCache.get(cacheKey);
     if (cached) {
       console.log(`💾 Cache HIT: ${cacheKey}`);
       return cached;
     }
 
-    // Check rate limit
     if (!this.canMakeCall()) {
       throw new Error('Daily API limit reached (100/100). Try again tomorrow.');
     }
 
-    // Make API call
     try {
+      const fetch = require('node-fetch');
       const url = `https://api.cricketdata.org/${endpoint}`;
       console.log(`🌐 API Call (${this.callsToday + 1}/100): ${endpoint}`);
       
@@ -64,7 +61,6 @@ class CricketAPIManager {
         cacheKey 
       });
       
-      // Cache the response
       apiCallCache.set(cacheKey, data, cacheTTL);
       
       return data;
@@ -90,7 +86,7 @@ class CricketAPIManager {
       used: this.callsToday,
       remaining: this.getRemainingCalls(),
       limit: this.dailyLimit,
-      logs: this.callLog.slice(-20) // Last 20 calls
+      logs: this.callLog.slice(-20)
     };
   }
 
