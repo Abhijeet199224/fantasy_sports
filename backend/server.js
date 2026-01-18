@@ -11,7 +11,7 @@ app.use(cors());
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
-// Health check (important for Render)
+// Health check
 app.get('/health', (req, res) => {
   res.status(200).json({ 
     status: 'ok', 
@@ -24,32 +24,16 @@ app.get('/', (req, res) => {
   res.json({ message: 'Fantasy Cricket API is running!' });
 });
 
-// Routes - with error handling
-try {
-  app.use('/api/auth', require('./routes/auth'));
-  app.use('/api/matches', require('./routes/matches'));
-  app.use('/api/contests', require('./routes/contests'));
-  app.use('/api/teams', require('./routes/teams'));
-  app.use('/api/admin', require('./routes/admin'));
-  console.log('✅ All routes loaded successfully');
-} catch (error) {
-  console.error('❌ Error loading routes:', error.message);
-  process.exit(1);
-}
+// Routes
+app.use('/api/auth', require('./routes/auth'));
+app.use('/api/matches', require('./routes/matches'));
+app.use('/api/contests', require('./routes/contests'));
+app.use('/api/teams', require('./routes/teams'));
+app.use('/api/admin', require('./routes/admin'));
 
-// Error handling middleware
+// Error handling
 app.use((err, req, res, next) => {
   console.error('Error:', err);
-  
-  if (err.name === 'ValidationError') {
-    const errors = Object.values(err.errors).map(e => e.message);
-    return res.status(400).json({ error: 'Validation Error', details: errors });
-  }
-  
-  if (err.code === 11000) {
-    return res.status(409).json({ error: 'Duplicate entry', field: Object.keys(err.keyPattern)[0] });
-  }
-  
   res.status(err.status || 500).json({ 
     error: err.message || 'Internal Server Error' 
   });
@@ -57,24 +41,13 @@ app.use((err, req, res, next) => {
 
 // MongoDB Connection
 mongoose.connect(process.env.MONGODB_URI)
-  .then(() => {
-    console.log('✅ MongoDB Connected');
-  })
+  .then(() => console.log('✅ MongoDB Connected'))
   .catch(err => {
-    console.error('❌ MongoDB Connection Error:', err);
+    console.error('❌ MongoDB Error:', err);
     process.exit(1);
   });
 
 const PORT = process.env.PORT || 10000;
 app.listen(PORT, () => {
   console.log(`🚀 Server running on port ${PORT}`);
-});
-
-// Graceful shutdown
-process.on('SIGTERM', () => {
-  console.log('SIGTERM received, shutting down gracefully');
-  mongoose.connection.close(false, () => {
-    console.log('MongoDB connection closed');
-    process.exit(0);
-  });
 });
