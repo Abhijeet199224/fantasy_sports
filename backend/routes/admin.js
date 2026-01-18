@@ -24,18 +24,15 @@ router.post('/refresh-match/:matchId', verifyAdmin, async (req, res) => {
       return res.status(404).json({ error: 'Match not found' });
     }
     
-    // Fetch live data from API
     const matchData = await apiManager.fetchWithCache(
       `match_info/${match.cricketApiId}`,
       `match_${match.cricketApiId}`,
-      300 // 5-minute cache
+      300
     );
     
-    // Update match with live data
     match.liveData = matchData;
     match.lastUpdated = new Date();
     
-    // Update match status
     if (matchData.status === 'live') {
       match.status = 'live';
     } else if (matchData.status === 'completed') {
@@ -64,19 +61,17 @@ router.post('/calculate-points/:matchId', verifyAdmin, async (req, res) => {
     }
     
     if (match.pointsCalculated) {
-      return res.status(400).json({ error: 'Points already calculated for this match' });
+      return res.status(400).json({ error: 'Points already calculated' });
     }
     
     if (match.status !== 'completed') {
-      return res.status(400).json({ error: 'Match is not completed yet' });
+      return res.status(400).json({ error: 'Match not completed' });
     }
     
-    // Calculate points for each player in the match
     for (const player of match.squad) {
       const result = PointsCalculator.calculatePlayerPoints(player.performance, player.role);
       player.points = result.points;
       
-      // Save to points history
       await PointsHistory.create({
         matchId: match._id,
         playerId: player.playerId,
@@ -88,14 +83,12 @@ router.post('/calculate-points/:matchId', verifyAdmin, async (req, res) => {
     
     await match.save();
     
-    // Calculate points for all fantasy teams in this match
     const teams = await FantasyTeam.find({ matchId: match._id });
     
     for (const team of teams) {
       const result = await PointsCalculator.calculateTeamPoints(team, match);
       team.totalPoints = result.totalPoints;
       
-      // Update individual player points in team
       for (const detail of result.playerDetails) {
         const playerIndex = team.players.findIndex(p => p.playerId === detail.playerId);
         if (playerIndex !== -1) {
@@ -105,25 +98,20 @@ router.post('/calculate-points/:matchId', verifyAdmin, async (req, res) => {
       
       await team.save();
       
-      // Update user stats
       await User.findByIdAndUpdate(team.userId, {
         $inc: { 'stats.totalPoints': result.totalPoints }
       });
     }
     
-    // Update rankings in each contest
     const contests = await Contest.find({ matchId: match._id });
     
     for (const contest of contests) {
-      const contestTeams = await FantasyTeam.find({ 
-        contestId: contest._id 
-      }).sort({ totalPoints: -1 });
+      const contestTeams = await FantasyTeam.find({ contestId: contest._id }).sort({ totalPoints: -1 });
       
       for (let i = 0; i < contestTeams.length; i++) {
         contestTeams[i].rank = i + 1;
         await contestTeams[i].save();
         
-        // Award winner
         if (i === 0) {
           await User.findByIdAndUpdate(contestTeams[i].userId, {
             $inc: { 'stats.contestsWon': 1 }
@@ -159,7 +147,7 @@ router.post('/make-admin/:userId', verifyAdmin, async (req, res) => {
   try {
     const user = await User.findByIdAndUpdate(
       req.params.userId,
-      { $set: { isAdmin: true } },
+      { isAdmin: true },
       { new: true }
     );
     
