@@ -23,9 +23,7 @@ router.put('/profile', verifyAuth, async (req, res) => {
     
     const updatedUser = await User.findByIdAndUpdate(
       req.dbUser._id,
-      { 
-        $set: { displayName, avatar }
-      },
+      { displayName, avatar },
       { new: true }
     );
     
@@ -38,8 +36,7 @@ router.put('/profile', verifyAuth, async (req, res) => {
 // Get user by ID
 router.get('/user/:userId', async (req, res) => {
   try {
-    const user = await User.findById(req.params.userId)
-      .select('-supabaseId');
+    const user = await User.findById(req.params.userId).select('-supabaseId');
     
     if (!user) {
       return res.status(404).json({ error: 'User not found' });
@@ -51,4 +48,4 @@ router.get('/user/:userId', async (req, res) => {
   }
 });
 
-module.exports = router; // ✅ MAKE SURE THIS LINE EXISTS
+module.exports = router;
