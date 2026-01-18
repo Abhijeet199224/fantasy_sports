@@ -17,15 +17,14 @@ async function verifyAuth(req, res, next) {
     
     const token = authHeader.split('Bearer ')[1];
     
-    // ❌ WRONG: const {  { user }, error } = await supabase.auth.getUser(token);
-    // ✅ CORRECT:
-    const {  { user }, error } = await supabase.auth.getUser(token);
+    const { data, error } = await supabase.auth.getUser(token);
     
-    if (error || !user) {
+    if (error || !data || !data.user) {
       return res.status(401).json({ error: 'Invalid token' });
     }
     
-    // Find or create user in MongoDB
+    const user = data.user;
+    
     let dbUser = await User.findOne({ supabaseId: user.id });
     
     if (!dbUser) {
@@ -47,16 +46,12 @@ async function verifyAuth(req, res, next) {
 }
 
 async function verifyAdmin(req, res, next) {
-  try {
-    await verifyAuth(req, res, async () => {
-      if (!req.dbUser.isAdmin) {
-        return res.status(403).json({ error: 'Admin access required' });
-      }
-      next();
-    });
-  } catch (error) {
-    res.status(500).json({ error: 'Admin verification failed' });
-  }
+  await verifyAuth(req, res, () => {
+    if (!req.dbUser || !req.dbUser.isAdmin) {
+      return res.status(403).json({ error: 'Admin access required' });
+    }
+    next();
+  });
 }
 
 module.exports = { verifyAuth, verifyAdmin };
